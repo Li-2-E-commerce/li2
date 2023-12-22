@@ -71,7 +71,7 @@ const ConfirmOrder = () => {
     try {
       const token = document.cookie["token"];
       await axios.post(
-        "http://localhost:4000/api/v1/order/new",
+        "/api/v1/order/new",
         {
             "itemsPrice":subtotal,
             "shippingPrice":shippingCharges,
