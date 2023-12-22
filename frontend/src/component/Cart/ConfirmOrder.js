@@ -7,8 +7,11 @@ import { Link } from "react-router-dom";
 import { Typography } from "@material-ui/core";
 import CryptoJS from 'crypto-js';
 import axios from 'axios';
+import { useAlert } from "react-alert"
+import Cookies from "js-cookie";
 
-const ConfirmOrder = ({ history }) => {
+const ConfirmOrder = () => {
+  const alert = useAlert();
   const { shippingInfo, cartItems } = useSelector((state) => state.cart);
   const { user } = useSelector((state) => state.user);
 
@@ -34,14 +37,28 @@ const ConfirmOrder = ({ history }) => {
     product_code:"EPAYTEST",
     product_service_charge:0,
     product_delivery_charge:shippingCharges,
-    success_url:"https://localhost:3000",
+    success_url:"https://developer.esewa.com.np/success",
     failure_url:"https://developer.esewa.com.np/failure",
     signed_field_names:"total_amount,transaction_uuid,product_code",
     signature:"",
     secret:"8gBm/:&EnhH.1/q" 
   }
 
-  const proceedToPayment = () => {
+  const proceedToPayment = async () => {
+    // const data = {
+    //   "itemsPrice":subtotal,
+    //   "shippingPrice":shippingCharges,
+    //   "taxPrice":tax,
+    //   "totalPrice":totalPrice,
+    //   "orderStatus":"Processing",
+    //   shippingInfo,
+    //   "orderItems":cartItems,
+    //   "paymentInfo":{
+    //     id:1000,
+    //     status:"new"
+    //   },
+    //   "user":user["_id"]
+    // };
     const data = {
       subtotal,
       shippingCharges,
@@ -50,15 +67,53 @@ const ConfirmOrder = ({ history }) => {
     };
 
     sessionStorage.setItem("orderInfo", JSON.stringify(data));
-    axios.post("http://localhost:4000/api/v1/order/new",data)
-      .then((response) => {
-        console.log("Success");
-      }).catch((e) => console.log(e));
+
+    try {
+      const token = document.cookie["token"];
+      await axios.post(
+        "http://localhost:4000/api/v1/order/new",
+        {
+            "itemsPrice":subtotal,
+            "shippingPrice":shippingCharges,
+            "taxPrice":tax,
+            "totalPrice":totalPrice,
+            "orderStatus":"Processing",
+            shippingInfo,
+            "orderItems":cartItems,
+            "paymentInfo":{
+              id:1000,
+              status:"new"
+            },
+            "user":user["_id"]
+          },
+        // {
+        //   shippingInfo,
+        //   orderItems: cartItems,
+        //   paymentInfo: { id: "figure_it_out_yourself", status: "succeeded" },
+        //   itemsPrice: subtotal,
+        //   taxPrice: tax,
+        //   shippingPrice: shippingCharges,
+        //   totalPrice,
+        // },
+        {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            Cookie: `token=${token}`,
+          },
+          withCredentials: true,
+        }
+      );
 
     var form = document.createElement("form")
     form.setAttribute("method","POST")
     form.setAttribute("action","https://rc-epay.esewa.com.np/api/epay/main/v2/form")
     form.setAttribute("onSubmit",generateHashandTransactionUUID(form))
+
+    } 
+    catch (err) {
+      console.log(err);
+      alert.error("There's some issue while checking out the products.");
+    }
   };
 
   const generateHashandTransactionUUID = (form) =>{
@@ -93,7 +148,7 @@ const ConfirmOrder = ({ history }) => {
     <Fragment>
       <MetaData title="Confirm Order" />
       <CheckoutSteps activeStep={1} />
-      <div classNme="confirmOrderPage">
+      <div className="confirmOrderPage">
         <div>
           <div className="confirmshippingArea">
             <Typography>Shipping Info</Typography>
